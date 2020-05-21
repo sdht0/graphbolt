@@ -37,14 +37,16 @@ int parallel_main(int argc, char *argv[]) {
   char *oFile = P.getArgument(0);
   bool sym = P.getOption("-s");
   bool weighted = P.getOption("-w");
-  cout << "Reading graph and creating \n";
+  cout << "Reading graph and creating\n";
   edgeArray G;
   if (weighted) {
     wghEdgeArray G = readWghSNAP(iFile);
+    cout << "Read " << G.numRows << " vertices and " << G.nonZeros << " edges\n";
     cout << "Writing to output file\n";
     writeWghGraphToFile(wghGraphFromWghEdges(G, sym), oFile);
   } else {
     edgeArray G = readSNAP(iFile);
+    cout << "Read " << G.numRows << " vertices and " << G.nonZeros << " edges\n";
     cout << "Writing to output file\n";
     writeGraphToFile(graphFromEdges(G, sym), oFile);
   }

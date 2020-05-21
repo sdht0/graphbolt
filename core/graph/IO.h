@@ -470,6 +470,7 @@ graph<vertex> readGraphFromFile(char *fname, bool isSymmetric, bool simpleFlag,
 template <class vertex>
 graph<vertex> readGraph(char *iFile, bool symmetric, bool isSimple,
                         bool debugFlag) {
-  return readGraphFromFile<vertex>(iFile, symmetric, isSimple, debugFlag);
+  auto g = readGraphFromFile<vertex>(iFile, symmetric, isSimple, debugFlag);
+  std::cout << "Loaded graph with " << g.n << " vertices and " << g.m << " edges." << endl;
 }
 #endif

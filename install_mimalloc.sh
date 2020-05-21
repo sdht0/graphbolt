@@ -19,6 +19,7 @@ then
         exit
     fi
     cd mimalloc
+    git checkout v1.5.0
 fi
 
 echo "CMake is required for installing mimalloc"

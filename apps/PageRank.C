@@ -24,6 +24,8 @@
 #include "../core/main.h"
 #include <math.h>
 
+typedef double ldouble;
+
 // ======================================================================
 // PAGERANKINFO
 // ======================================================================
@@ -31,13 +33,13 @@ class PageRankInfo {
 public:
   // Should I just use vectors for this?
   uintV n;
-  double epsilon;
-  double damping;
+  ldouble epsilon;
+  ldouble damping;
   long *out_degrees;
 
   PageRankInfo() : n(0), epsilon(0), damping(0), out_degrees(nullptr) {}
 
-  PageRankInfo(uintV _n, double _epsilon, double _damping)
+  PageRankInfo(uintV _n, ldouble _epsilon, ldouble _damping)
       : n(_n), epsilon(_epsilon), damping(_damping) {
     if (n > 0) {
       out_degrees = newA(long, n);
@@ -100,10 +102,10 @@ public:
 // ======================================================================
 // AGGREGATEVALUE AND VERTEXVALUE INITIALIZATION
 // ======================================================================
-double initial_aggregation_value = 0;
-double initial_vertex_value = 1;
-double aggregation_value_identity = 0;
-double vertex_value_identity = 0;
+ldouble initial_aggregation_value = 0;
+ldouble initial_vertex_value = 1;
+ldouble aggregation_value_identity = 0;
+ldouble vertex_value_identity = 0;
 template <class AggregationValueType, class GlobalInfoType>
 inline void
 initializeAggregationValue(const uintV &v,
@@ -279,8 +281,8 @@ template <class vertex> void compute(graph<vertex> &G, commandLine config) {
   uintV n = G.n;
   int max_iters = config.getOptionLongValue("-maxIters", 10);
   max_iters += 1;
-  double epsilon = 0.01;
-  double damping = 0.85;
+  ldouble epsilon = 0.01;
+  ldouble damping = 0.85;
 
   PageRankInfo global_info(n, epsilon, damping);
   parallel_for(uintV i = 0; i < n; i++) {
@@ -288,7 +290,7 @@ template <class vertex> void compute(graph<vertex> &G, commandLine config) {
   }
 
   cout << "Initializing engine ....\n";
-  GraphBoltEngineSimple<vertex, double, double, PageRankInfo> engine(
+  GraphBoltEngineSimple<vertex, ldouble, ldouble, PageRankInfo> engine(
       G, max_iters, global_info, false, config);
   engine.init();
   cout << "Finished initializing engine\n";

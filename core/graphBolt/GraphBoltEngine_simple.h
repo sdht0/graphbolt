@@ -23,6 +23,7 @@
 #define GRAPHBOLT_ENGINE_SIMPLE_H
 
 #include "GraphBoltEngine.h"
+#include <stdio.h>
 
 // ======================================================================
 // GRAPHBOLTENGINESIMPLE
@@ -82,6 +83,8 @@ public:
 
     } else {
       for (iter = start_iteration; iter < max_iterations; iter++) {
+
+        printf("Iter: %d\n",iter);
         // initialize timers
         if (ae_enabled) {
           phase_timer.start();
@@ -121,6 +124,10 @@ public:
             }
           }
         }
+        for(uintV u = 0; u < n; u++) {
+          printf("%lf ",source_change_in_contribution[u]);
+        }
+        cout << endl;
 
         parallel_for(uintV u = 0; u < n; u++) {
           if (frontier_curr[u]) {
@@ -172,6 +179,7 @@ public:
             // delta[v])
             addToAggregation(delta[v], aggregation_values[iter][v],
                              global_info);
+            printf("3.0: v=%d, cc=%f, agg=%f\n",v,delta[v],aggregation_values[iter][v]);
             delta[v] = aggregationValueIdentity<AggregationValueType>();
 
             // Calculate new_value based on the updated aggregation value
@@ -185,6 +193,7 @@ public:
               vertex_values[iter][v] = new_value;
               // Set active for next iteration.
               frontier_curr[v] = 1;
+              
             } else {
               // change is not significant. Copy vertex_values[iter-1]
               vertex_values[iter][v] = vertex_values[iter - 1][v];
@@ -207,6 +216,14 @@ public:
             }
           }
         }
+        for(uintV u = 0; u < n; u++) {
+          printf("%lf ",aggregation_values[iter][u]);
+        }
+        cout << endl;
+        for(uintV u = 0; u < n; u++) {
+          printf("%lf ",vertex_values[iter][u]);
+        }
+        cout << endl;
         if (ae_enabled) {
           phase_time = phase_timer.stop();
           adaptive_executor.updateVertexMapTime(iter, phase_time);
@@ -214,6 +231,12 @@ public:
 
         vertexSubset temp_vs(n, frontier_curr);
         frontier_curr_vs = temp_vs;
+
+        for(uintV u = 0; u < n; u++) {
+          printf("%d ",frontier_curr[u]);
+        }
+        cout << endl;
+        cout << endl;
 
         // Convergence check
         converged_iteration = iter;
@@ -319,6 +342,7 @@ public:
           } else {
             addToAggregationAtomic(contrib_change, delta[destination],
                                    global_info_old);
+            printf("%d,%d += %f, %f\n",source,destination,contrib_change,delta[destination]);
           }
           if (!changed[destination])
             changed[destination] = true;
@@ -371,6 +395,7 @@ public:
           } else {
             removeFromAggregationAtomic(contrib_change, delta[destination],
                                         global_info_old);
+            printf("%d,%d -= %f, %f\n",source,destination,contrib_change,delta[destination]);
           }
           if (!changed[destination])
             changed[destination] = true;
@@ -378,12 +403,24 @@ public:
       }
     }
 
+    cout << "frontier:\n";
+    for(uintV u = 0; u < n; u++) {
+      printf("%d ",frontier_curr[u]);
+    }
+    cout << endl;
+    cout << "delta:\n";
+    for(uintV u = 0; u < n; u++) {
+      printf("%f ",delta[u]);
+    }
+    cout << endl;
+
     // =============== INCREMENTAL COMPUTE - REFINEMENT START ================
     vertexSubset frontier_curr_vs(n, frontier_curr);
     bool should_switch_now = false;
     bool use_delta = true;
 
     for (int iter = 1; iter < max_iterations; iter++) {
+      cout << "Iter = " << iter << endl;
       // Perform switch if needed
       if (should_switch_now) {
         converged_iteration = performSwitch(iter);
@@ -425,15 +462,29 @@ public:
                 vertex_values[iter - 1][u], global_info);
             addToAggregation(contrib_change, source_change_in_contribution[u],
                              global_info);
+            printf("ICC: v=%d, cc+=%f, scic=%f\n",u,contrib_change,source_change_in_contribution[u]);
             sourceChangeInContribution<AggregationValueType, VertexValueType,
                                        GlobalInfoType>(
                 u, contrib_change, vertexValueIdentity<VertexValueType>(),
                 vertex_value_old_curr[u], global_info_old);
             removeFromAggregation(
                 contrib_change, source_change_in_contribution[u], global_info);
+            printf("ICC: v=%d, cc-=%f, scic=%f\n",u,contrib_change,source_change_in_contribution[u]);
           }
         }
       }
+
+
+    cout << "frontier:\n";
+    for(uintV u = 0; u < n; u++) {
+      printf("%d=%d ",u,frontier_curr[u]);
+    }
+    cout << endl;
+    cout << "source_change_in_contribution:\n";
+    for(uintV u = 0; u < n; u++) {
+      printf("%f ",source_change_in_contribution[u]);
+    }
+    cout << endl;
 
       parallel_for(uintV u = 0; u < n; u++) {
         if (frontier_curr[u]) {
@@ -467,6 +518,7 @@ public:
               } else {
                 if (ret) {
                   addToAggregationAtomic(contrib_change, delta[v], global_info);
+                  printf("3.0: v=%d, cc=%f, delta=%f\n",v,contrib_change,delta[v]);
                 }
               }
               if (!changed[v])
@@ -475,6 +527,33 @@ public:
           });
         }
       }
+
+    cout << "changed:\n";
+    for(uintV u = 0; u < n; u++) {
+      printf("%d=%d ",u,changed[u]);
+    }
+    cout << endl;
+    cout << "delta:\n";
+    for(uintV u = 0; u < n; u++) {
+      printf("%d=%lf ",u,delta[u]);
+    }
+    cout << endl;
+
+    cout << "aggregation_values old:\n";
+    for(uintV u = 0; u < n; u++) {
+      printf("%d=%lf ",u,aggregation_values[iter][u]);
+    }
+    cout << endl;
+      cout << "vertex_values old:\n";
+      for(uintV u = 0; u < n; u++) {
+        printf("%d=%lf ",u,vertex_values[iter][u]);
+      }
+      cout << endl;
+      cout << "vertex_values old2:\n";
+      for(uintV u = 0; u < n; u++) {
+        printf("%d=%lf ",u,vertex_values[iter-1][u]);
+      }
+      cout << endl;
 
       // ========== VERTEX COMPUTATION  ==========
       bool use_delta_next_iteration = shouldUseDelta(iter + 1);
@@ -491,10 +570,12 @@ public:
           // delta has the current cumulative change for the vertex.
           // Update the aggregation value in history
           addToAggregation(delta[v], aggregation_values[iter][v], global_info);
-
+          
           VertexValueType new_value;
           computeFunction(v, aggregation_values[iter][v],
                           vertex_values[iter - 1][v], new_value, global_info);
+
+          printf("   3.1: v=%d, d=%lf, av=%lf, nv=%lf, pv=%lf, df=%lf\n",v,delta[v],aggregation_values[iter][v],new_value,vertex_values[iter - 1][v],new_value-vertex_values[iter - 1][v]);
 
           if (forceActivateVertexForIteration(v, iter + 1, global_info)) {
             frontier_curr[v] = 1;
@@ -521,6 +602,7 @@ public:
             }
             addToAggregation(contrib_change, source_change_in_contribution[v],
                              global_info);
+            printf("        3.3: v=%d, +cc=%lf\n",v,contrib_change);
 
           } else {
             // change is not significant. Copy vertex_values[iter-1]
@@ -546,9 +628,16 @@ public:
             removeFromAggregation(contrib_change,
                                   source_change_in_contribution[v],
                                   global_info_old);
+            printf("        3.3: v=%d, -cc=%lf\n",v,contrib_change);
           }
+            printf("      3.2: v=%d, vv=%lf, scic=%lf\n",v,vertex_values[iter][v],source_change_in_contribution[v]);
         }
       }
+    cout << "aggregation_values:\n";
+    for(uintV u = 0; u < n; u++) {
+      printf("%d=%lf ",u,aggregation_values[iter][u]);
+    }
+    cout << endl;
 
       // ========== EDGE COMPUTATION - DIRECT CHANGES - for next iter ==========
       bool has_direct_changes = false;
@@ -591,6 +680,7 @@ public:
             } else {
               addToAggregationAtomic(contrib_change, delta[destination],
                                      global_info_old);
+            printf("           3.5: v=%d, dst=%d, +cc=%lf, delta=%lf on=%lf, oc=%lf\n",source,destination,contrib_change,delta[destination],vertex_value_old_next[source],vertex_value_old_curr[source]);
             }
             if (!changed[destination])
               changed[destination] = 1;
@@ -640,6 +730,7 @@ public:
             } else {
               removeFromAggregationAtomic(contrib_change, delta[destination],
                                           global_info_old);
+            printf("           3.5: v=%d, dst=%d, -cc=%lf, delta=%lf on=%lf, oc=%lf\n",source,destination,contrib_change,delta[destination],vertex_value_old_next[source],vertex_value_old_curr[source]);
             }
             if (!changed[destination])
               changed[destination] = 1;
@@ -648,6 +739,11 @@ public:
           }
         }
       }
+      cout << "vertex_values:\n";
+      for(uintV u = 0; u < n; u++) {
+        printf("%d=%lf ",u,vertex_values[iter][u]);
+      }
+      cout << endl;
 
       vertexSubset temp_vs(n, frontier_curr);
       frontier_curr_vs = temp_vs;
@@ -679,7 +775,7 @@ public:
 
     cout << "Finished batch : " << full_timer.stop() << "\n";
     cout << "Number of iterations : " << converged_iteration << "\n";
-    // testPrint();
+    //testPrint();
     printOutput();
   }
 

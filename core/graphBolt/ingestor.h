@@ -58,6 +58,7 @@ public:
   long number_of_batches;
   long current_batch;
   char *stream_path;
+  char *prefix;
 
   bool simple_flag;
   bool fixed_batch_flag;
@@ -73,6 +74,7 @@ public:
 
     is_symmetric = config.getOptionValue("-s");
     stream_path = config.getOptionValue("-streamPath");
+    prefix = config.getOptionValue("-prefix");
     simple_flag = config.getOptionValue("-simple");
     fixed_batch_flag = config.getOptionValue("-fixedBatchSize");
     enforce_edge_validity_flag = config.getOptionValue("-enforceEdgeValidity");
@@ -120,23 +122,30 @@ public:
     }
   }
 
-  void validateAndOpenFifo() {
-    if (!stream_path) {
+  void validateAndOpenFifo(int batch_id) {
+    if (!stream_path || !prefix) {
       std::cerr << "Error in command-line arguments. Please input a valid "
-                   "stream_path or fileName"
+                   "stream_path or fileName and prefix"
                 << std::endl;
       exit(1);
     }
-    if (access(stream_path, F_OK) == -1) {
-      int res = mkfifo(stream_path, 0777);
+    string full_path = string(stream_path) + "/" + string(prefix) + 
+                          std::to_string(batch_id) + ".txt";
+    cout << "Opening stream '" << full_path << "': Waiting for writer to open..." << endl;
+    if (access(full_path.c_str(), F_OK) == -1) {
+      int res = mkfifo(full_path.c_str(), 0777);
       if (res != 0) {
         std::cerr << "Could not create fifo" << std::endl;
         exit(1);
       }
     }
-    cout << "Opening Stream: Waiting for writer to open..." << endl;
-    stream_file.open(stream_path);
-    cout << "Stream opened" << endl;
+    stream_file.open(full_path.c_str());
+    cout << "Stream for batch " << batch_id << " opened" << endl;
+  }
+
+  void closeFifo(int batch_id) {
+    stream_file.close();
+    cout << "Stream for batch " << batch_id << " closed" << endl;
   }
 
   tuple<edgeArray, edgeArray, long, long>
@@ -253,14 +262,14 @@ public:
         }
 #else
         if (tokens.size() == 3) {
-          edgeType = tokens[0].at(0);
-          source = stoi(tokens[1]);
-          destination = stoi(tokens[2]);
+          source = stoi(tokens[0]);
+          destination = stoi(tokens[1]);
+          edgeType = stoi(tokens[2]);
 
-          if (edgeType == 'a') {
+          if (edgeType == 1) {
             uncheckedEA[uncheckedEACount] = make_pair(source, destination);
             uncheckedEACount++;
-          } else if (edgeType == 'd') {
+          } else if (edgeType == -1) {
             uncheckedED[uncheckedEDCount] = make_pair(source, destination);
             uncheckedEDCount++;
           }
@@ -496,11 +505,6 @@ public:
   }
 
   bool processNextBatch() {
-    current_batch++;
-    if (current_batch > number_of_batches) {
-      cout << "Hit Max Batch Size" << endl;
-      return false;
-    }
     cleanup();
 
     timer timer1, timer2, fullTimer;

@@ -377,7 +377,7 @@ public:
     }
   }
 
-  void deltaCompute(edgeArray &edge_additions, edgeArray &edge_deletions) {
+  double deltaCompute(edgeArray &edge_additions, edgeArray &edge_deletions) {
     timer iteration_timer, phase_timer, full_timer;
     double misc_time, copy_time, phase_time, iteration_time;
     full_timer.start();
@@ -557,8 +557,10 @@ public:
     }
     traditionalIncrementalComputation();
 
-    cout << "Finished batch : " << full_timer.stop() << "\n";
+    double time = full_timer.stop();
+    cout << "Finished batch : " << time << "\n";
     printOutput();
+    return time;
   }
 };
 

@@ -231,7 +231,7 @@ public:
   // ======================================================================
   // DELTACOMPUTE
   // ======================================================================
-  void deltaCompute(edgeArray &edge_additions, edgeArray &edge_deletions) {
+  double deltaCompute(edgeArray &edge_additions, edgeArray &edge_deletions) {
     timer iteration_timer, phase_timer, full_timer;
     double iteration_time = 0;
     full_timer.start();
@@ -677,10 +677,13 @@ public:
       iteration_time = iteration_timer.next();
     }
 
-    cout << "Finished batch : " << full_timer.stop() << "\n";
+    double time = full_timer.stop();
+    cout << "Finished batch : " << time << "\n";
     cout << "Number of iterations : " << converged_iteration << "\n";
     // testPrint();
     printOutput();
+
+    return time;
   }
 
   // Refactor this in a better way

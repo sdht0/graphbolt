@@ -522,31 +522,39 @@ public:
         output_file << vertex_values[converged_iteration][v] << "\n";
       }
     }
-    cout << "\n";
     current_batch++;
   }
   // ======================================================================
   // RUN AND INITIAL COMPUTE
   // ======================================================================
   void run() {
+    double total_time = 0.0;
+
     // TODO : Update converged_iteration for fullCompute and deltaCompute
-    initialCompute();
+    double time = initialCompute();
+    total_time += time;
 
     // ======================================================================
     // Incremental Compute - Get the next update batch from ingestor
     // ======================================================================
-    ingestor.validateAndOpenFifo();
-    while (ingestor.processNextBatch()) {
+    for (int batch_id = 1; batch_id <= ingestor.number_of_batches; batch_id++) {
+      ingestor.validateAndOpenFifo(batch_id);
+      ingestor.processNextBatch();
       edgeArray &edge_additions = ingestor.getEdgeAdditions();
       edgeArray &edge_deletions = ingestor.getEdgeDeletions();
       // ingestor.edge_additions and ingestor.edge_deletions have been added
       // to the graph datastructure. Now, refine using it.
-      deltaCompute(edge_additions, edge_deletions);
+      time = deltaCompute(edge_additions, edge_deletions);
+      total_time += time;
+      ingestor.closeFifo(batch_id);
+      cout << "\n";
     }
     freeTemporaryStructures();
+
+    cout << "Total processing time: " << total_time << "\n";
   }
 
-  void initialCompute() {
+  double initialCompute() {
     timer full_timer;
     full_timer.start();
 
@@ -560,14 +568,17 @@ public:
     }
     int iters = traditionalIncrementalComputation(1);
 
-    cout << "Initial graph processing : " << full_timer.stop() << "\n";
+    double time = full_timer.stop();
+    cout << "Initial graph processing : " << time << "\n";
     cout << "Number of iterations : " << iters << "\n";
     printOutput();
     // testPrint();
+
+    return time;
   }
 
   virtual int traditionalIncrementalComputation(int start_iteration) = 0;
-  virtual void deltaCompute(edgeArray &edge_additions,
+  virtual double deltaCompute(edgeArray &edge_additions,
                             edgeArray &edge_deletions) = 0;
 
   // ======================================================================
